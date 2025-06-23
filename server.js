@@ -5,46 +5,57 @@ require('dotenv').config(); // Carrega as variáveis do arquivo .env
 
 // Inicializa o aplicativo Express
 const app = express();
-app.use(express.json()); // Permite que o servidor entenda JSON
+// IMPORTANTE: Para o webhook do Asaas funcionar, precisamos do 'raw body'
+// Por isso, a configuração do express.json é feita de forma condicional.
+app.use((req, res, next) => {
+  if (req.originalUrl === '/webhook-asaas') {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+});
 
 // Pega as variáveis de ambiente
 const ASAAS_API_KEY = process.env.ASAAS_API_KEY;
 const URL_FORMULARIO_GOOGLE = process.env.URL_FORMULARIO_GOOGLE;
-const PORT = process.env.PORT || 3000;
+const SERVER_DOMAIN = process.env.SERVER_DOMAIN;
+const PORT = process.env.PORT || 82;
 
-// NOVO ENDPOINT da API Sandbox do Asaas para Checkouts
-const ASAAS_API_URL = 'https://sandbox.asaas.com/api/v3/checkouts';
+// URL da API Sandbox do Asaas para o NOVO CHECKOUT
+const ASAAS_CHECKOUT_API_URL = 'https://sandbox.asaas.com/api/v3/checkouts';
 
-// Endpoint principal para criar o checkout
+// ===================================================
+// ROTA 1: CRIAR O CHECKOUT PARA O CLIENTE PAGAR
+// ===================================================
 app.post('/criar-checkout', async (req, res) => {
-  console.log('Recebida requisição para /criar-checkout com o novo payload.');
+  console.log('Recebida requisição para /criar-checkout');
 
-  if (!ASAAS_API_KEY || !URL_FORMULARIO_GOOGLE) {
-    return res.status(500).json({ error: 'Variáveis de ambiente não configuradas no servidor.' });
+  if (!ASAAS_API_KEY || !URL_FORMULARIO_GOOGLE || !SERVER_DOMAIN) {
+    return res.status(500).json({ error: 'Variáveis de ambiente não configuradas corretamente no servidor.' });
   }
 
-  // NOVO PAYLOAD - Estruturado para permitir apenas PIX e BOLETO
+  // Corpo da requisição para o Asaas Checkout
   const payload = {
-    billingTypes: ["PIX", "BOLETO"], // <-- AQUI ESTÁ A MÁGICA: Apenas os meios de pagamento que você quer
+    billingTypes: ["PIX", "BOLETO"], // Apenas PIX e BOLETO
     chargeType: "DETACHED",
-    minutesToExpire: 1440, // 24 horas para o link expirar (bom para boleto)
+    minutesToExpire: 120, // Link válido por 2 horas
     callback: {
       successUrl: URL_FORMULARIO_GOOGLE, // Redireciona para o forms após o pagamento
-      // Opcional: você pode adicionar URLs para cancelamento ou expiração
-      // cancelUrl: "https://seusite.com/cancelado",
-      // expiredUrl: "https://seusite.com/expirado"
+      autoRedirect: true,
+      // URL para onde o Asaas enviará as notificações DESTA cobrança específica
+      notificationUrl: `${SERVER_DOMAIN}/webhook-asaas`
     },
     items: [
       {
-        name: "Diagnóstico de Maturidade de Almoxarifado (Teste)",
+        name: "Diagnóstico de Maturidade de Almoxarifado",
         description: "Acesso ao formulário para geração de relatório personalizado com IA.",
         quantity: 1,
-        value: 1.00 // Preço de teste para o sandbox
+        value: 1.00 // Preço de teste
       }
     ]
   };
 
-  // Headers da requisição (permanecem os mesmos)
+  // Headers da requisição
   const headers = {
     'Content-Type': 'application/json',
     'access_token': ASAAS_API_KEY,
@@ -52,37 +63,65 @@ app.post('/criar-checkout', async (req, res) => {
   };
 
   try {
-    // Faz a chamada para a API do Asaas usando Axios
-    const asaasResponse = await axios.post(ASAAS_API_URL, payload, { headers });
+    const asaasResponse = await axios.post(ASAAS_CHECKOUT_API_URL, payload, { headers });
 
-    console.log('Resposta do Asaas (Checkout) recebida com sucesso:', asaasResponse.data);
+    console.log('Sessão de Checkout criada com sucesso:', asaasResponse.data);
 
-    // O Asaas retorna um ID. Montamos a URL de checkout com ele.
-    const checkoutUrl = `https://sandbox.asaas.com/c/${asaasResponse.data.id}`;
-    
     // Retorna a URL de pagamento para o cliente
     res.status(200).json({
       success: true,
-      checkoutUrl: checkoutUrl
+      checkoutUrl: asaasResponse.data.url
     });
 
   } catch (error) {
-    console.error('Erro ao chamar a API de Checkouts do Asaas:', error.response ? error.response.data : error.message);
+    console.error('Erro ao criar o Checkout no Asaas:', error.response ? error.response.data : error.message);
     res.status(500).json({
       success: false,
-      message: 'Erro ao criar o checkout.',
+      message: 'Erro ao criar a sessão de checkout.',
       details: error.response ? error.response.data : error.message
     });
   }
 });
 
+// ===================================================
+// ROTA 2: WEBHOOK PARA RECEBER NOTIFICAÇÕES DO ASAAS
+// ===================================================
+app.post('/webhook-asaas', express.raw({ type: 'application/json' }), (req, res) => {
+  try {
+    // O Asaas envia os dados no corpo da requisição
+    const notification = JSON.parse(req.body.toString());
+    console.log('====== NOTIFICAÇÃO DO ASAAS RECEBIDA ======');
+    console.log('Evento:', notification.event);
+    console.log('ID do Pagamento:', notification.payment.id);
+    console.log('Status:', notification.payment.status);
+    console.log('=========================================');
+
+    // AQUI VOCÊ COLOCA A LÓGICA PARA FAZER ALGO COM A NOTIFICAÇÃO
+    if (notification.event === 'PAYMENT_CONFIRMED' || notification.event === 'PAYMENT_RECEIVED') {
+      console.log(`✅ Pagamento ${notification.payment.id} confirmado!`);
+      // Exemplo:
+      // 1. Pegar o email do cliente: notification.payment.customer.email
+      // 2. Marcar no seu banco de dados que o cliente pagou.
+      // 3. Enviar um e-mail de confirmação com o link do formulário (se não usar o redirecionamento automático).
+    }
+
+    // Responda ao Asaas com status 200 OK para confirmar o recebimento.
+    res.status(200).send('Notificação recebida com sucesso.');
+
+  } catch (error) {
+    console.error('Erro ao processar webhook do Asaas:', error);
+    // Mesmo em caso de erro, responda 200 para o Asaas não ficar reenviando.
+    res.status(200).send('Erro no processamento, mas notificação recebida.');
+  }
+});
+
+
 // Endpoint de "saúde" para verificar se a API está no ar
 app.get('/', (req, res) => {
-  res.send('API Gateway Asaas (v2 - Checkout) está no ar!');
+  res.send('API Gateway Asaas v2 (com Webhook) está no ar!');
 });
 
 // Inicia o servidor na porta especificada
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-  console.log('Pressione CTRL+C para parar o servidor.');
+  console.log(`Servidor rodou na porta ${PORT}`);
 });
