@@ -36,7 +36,11 @@ app.post('/criar-checkout', express.json(), async (req, res) => {
 
   const payload = {
     chargeTypes: ["DETACHED"],
-    billingTypes: ["PIX"],
+    // ===================================================
+    // MODIFICAÇÃO AQUI: Adicionando CREDIT_CARD
+    // ===================================================
+    billingTypes: ["PIX", "CREDIT_CARD"], // <-- MUDANÇA AQUI!
+    // ===================================================
     minutesToExpire: 120,
     callback: {
       successUrl: URL_FORMULARIO_GOOGLE,
@@ -69,7 +73,7 @@ app.post('/criar-checkout', express.json(), async (req, res) => {
     // ===================================================
     res.status(200).json({
       success: true,
-      checkoutUrl: asaasResponse.data.link // <-- MUDANÇA AQUI!
+      checkoutUrl: asaasResponse.data.link
     });
     // ===================================================
 
