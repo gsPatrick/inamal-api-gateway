@@ -36,8 +36,7 @@ app.post('/criar-checkout', express.json(), async (req, res) => {
 
   const payload = {
     chargeTypes: ["DETACHED"],
-    // Vamos tentar com PIX e Boleto juntos. Se der erro, volte para ["PIX"].
-    billingTypes: ["PIX"], 
+    billingTypes: ["PIX", "BOLETO"],
     minutesToExpire: 120,
     callback: {
       successUrl: URL_FORMULARIO_GOOGLE,
@@ -64,10 +63,16 @@ app.post('/criar-checkout', express.json(), async (req, res) => {
   try {
     const asaasResponse = await axios.post(ASAAS_CHECKOUT_API_URL, payload, { headers });
     console.log('Sessão de Checkout criada com sucesso:', asaasResponse.data);
+
+    // ===================================================
+    // A CORREÇÃO ESTÁ NESTA LINHA: trocamos .url por .link
+    // ===================================================
     res.status(200).json({
       success: true,
-      checkoutUrl: asaasResponse.data.url
+      checkoutUrl: asaasResponse.data.link // <-- MUDANÇA AQUI!
     });
+    // ===================================================
+
   } catch (error) {
     console.error('Erro ao criar o Checkout no Asaas:', error.response ? error.response.data : error.message);
     res.status(500).json({
