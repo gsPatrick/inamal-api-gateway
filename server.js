@@ -27,30 +27,33 @@ const ASAAS_CHECKOUT_API_URL = 'https://sandbox.asaas.com/api/v3/checkouts';
 // ===================================================
 // ROTA 1: CRIAR O CHECKOUT PARA O CLIENTE PAGAR
 // ===================================================
-app.post('/criar-checkout', async (req, res) => {
+aapp.post('/criar-checkout', async (req, res) => {
   console.log('Recebida requisição para /criar-checkout');
 
   if (!ASAAS_API_KEY || !URL_FORMULARIO_GOOGLE || !SERVER_DOMAIN) {
     return res.status(500).json({ error: 'Variáveis de ambiente não configuradas corretamente no servidor.' });
   }
 
-  // Corpo da requisição para o Asaas Checkout
+  // Corpo da requisição para o Asaas Checkout (COM AS CORREÇÕES)
   const payload = {
-    billingTypes: ["PIX", "BOLETO"], // Apenas PIX e BOLETO
-    chargeType: "DETACHED",
-    minutesToExpire: 120, // Link válido por 2 horas
+    // CORREÇÃO 1: Usando 'chargeTypes' no plural e como um array
+    chargeTypes: ["DETACHED"], 
+    
+    billingTypes: ["PIX", "BOLETO"],
+    minutesToExpire: 120,
     callback: {
-      successUrl: URL_FORMULARIO_GOOGLE, // Redireciona para o forms após o pagamento
+      successUrl: URL_FORMULARIO_GOOGLE,
       autoRedirect: true,
-      // URL para onde o Asaas enviará as notificações DESTA cobrança específica
       notificationUrl: `${SERVER_DOMAIN}/webhook-asaas`
     },
     items: [
       {
-        name: "Diagnóstico de Maturidade de Almoxarifado",
-        description: "Acesso ao formulário para geração de relatório personalizado com IA.",
+        // CORREÇÃO 2: Nome do produto encurtado para menos de 30 caracteres
+        name: "Diagnóstico de Almoxarifado", 
+        description: "Relatório de maturidade com IA",
         quantity: 1,
-        value: 1.00 // Preço de teste
+        // CORREÇÃO 3: Valor ajustado para 67.90
+        value: 67.90 
       }
     ]
   };
