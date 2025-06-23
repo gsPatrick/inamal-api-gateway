@@ -39,7 +39,7 @@ app.post('/criar-checkout', async (req, res) => {
     // CORREÇÃO 1: Usando 'chargeTypes' no plural e como um array
     chargeTypes: ["DETACHED"], 
     
-    billingTypes: ["PIX", "BOLETO"],
+    billingTypes: ["PIX"], 
     minutesToExpire: 120,
     callback: {
       successUrl: URL_FORMULARIO_GOOGLE,
