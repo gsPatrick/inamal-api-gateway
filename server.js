@@ -36,24 +36,24 @@ app.post('/criar-checkout', async (req, res) => {
 
   // Corpo da requisição para o Asaas Checkout (COM AS CORREÇÕES)
   const payload = {
-    // CORREÇÃO 1: Usando 'chargeTypes' no plural e como um array
-    chargeTypes: ["DETACHED"], 
-    
-    billingTypes: ["PIX"], 
+    chargeTypes: ["DETACHED"],
+    billingTypes: ["PIX"], // Mantendo apenas PIX por enquanto para o teste
     minutesToExpire: 120,
     callback: {
       successUrl: URL_FORMULARIO_GOOGLE,
       autoRedirect: true,
-      notificationUrl: `${SERVER_DOMAIN}/webhook-asaas`
+      notificationUrl: `${SERVER_DOMAIN}/webhook-asaas`,
+      
+      // CORREÇÃO: Adicionando a URL de cancelamento obrigatória
+      // Podemos redirecionar para o seu domínio principal ou uma página específica
+      cancelUrl: SERVER_DOMAIN 
     },
     items: [
       {
-        // CORREÇÃO 2: Nome do produto encurtado para menos de 30 caracteres
-        name: "Diagnóstico de Almoxarifado", 
+        name: "Diagnóstico de Almoxarifado",
         description: "Relatório de maturidade com IA",
         quantity: 1,
-        // CORREÇÃO 3: Valor ajustado para 67.90
-        value: 67.90 
+        value: 67.90
       }
     ]
   };
