@@ -2,11 +2,20 @@
 const express = require('express');
 const axios = require('axios');
 require('dotenv').config(); // Carrega as variáveis do arquivo .env
+const cors = require('cors'); // <-- 1. IMPORTA O PACOTE CORS
 
 // Inicializa o aplicativo Express
 const app = express();
 // IMPORTANTE: Para o webhook do Asaas funcionar, precisamos do 'raw body'
 // Por isso, a configuração do express.json é feita de forma condicional.
+
+const corsOptions = {
+  origin: '*' // PERMITE QUALQUER ORIGEM (bom para desenvolvimento e testes iniciais)
+  // Para produção, use: origin: 'https://seu-site-react.com' 
+};
+
+app.use(cors(corsOptions)); // <-- 2. APLICA O MIDDLEWARE DO CORS
+
 app.use((req, res, next) => {
   if (req.originalUrl === '/webhook-asaas') {
     next();
