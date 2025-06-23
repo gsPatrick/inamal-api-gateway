@@ -36,7 +36,7 @@ app.post('/criar-checkout', express.json(), async (req, res) => {
 
   const payload = {
     chargeTypes: ["DETACHED"],
-    billingTypes: ["PIX", "BOLETO"],
+    billingTypes: ["PIX"],
     minutesToExpire: 120,
     callback: {
       successUrl: URL_FORMULARIO_GOOGLE,
