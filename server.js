@@ -21,8 +21,7 @@ const URL_FORMULARIO_GOOGLE = process.env.URL_FORMULARIO_GOOGLE;
 const SERVER_DOMAIN = process.env.SERVER_DOMAIN; // Deve ser o domínio do seu backend, ex: https://geral-inamal-gateway.r954jc.easypanel.host
 const PORT = process.env.PORT || 82;
 
-const ASAAS_CHECKOUT_API_URL = 'https://sandbox.asaas.com/api/v3/checkouts';
-
+const ASAAS_CHECKOUT_API_URL = 'https://api.asaas.com/v3/checkouts';
 // ===================================================
 // ROTA 1: CRIAR O CHECKOUT PARA O CLIENTE PAGAR
 // ===================================================
