@@ -77,15 +77,26 @@ app.post('/criar-checkout', express.json(), async (req, res) => {
     });
     // ===================================================
 
-  } catch (error) {
-    console.error('Erro ao criar o Checkout no Asaas:', error.response ? error.response.data : error.message);
-    res.status(500).json({
-      success: false,
-      message: 'Erro ao criar a sessão de checkout.',
-      details: error.response ? error.response.data : error.message
-    });
+ } catch (error) {
+  console.error('Erro ao criar o Checkout no Asaas:'); // Sua linha
+  // Adicione estes logs para mais detalhes:
+  if (error.response) {
+    console.error('Status da Resposta Asaas:', error.response.status);
+    console.error('Dados da Resposta Asaas:', JSON.stringify(error.response.data, null, 2));
+  } else if (error.request) {
+    console.error('Requisição Asaas feita, mas sem resposta:', error.request);
+  } else {
+    console.error('Erro ao configurar requisição para Asaas:', error.message);
   }
-});
+  console.error('Código do Erro (se houver, ex: ECONNREFUSED):', error.code);
+  console.error('Stack Completo do Erro:', error.stack); // Muito útil!
+
+  res.status(500).json({
+    success: false,
+    message: 'Erro ao criar a sessão de checkout.',
+    details: error.response ? error.response.data : (error.message || 'Erro desconhecido ao comunicar com o Asaas.')
+  });
+}
 
 // ===================================================
 // ROTA 2: WEBHOOK PARA RECEBER NOTIFICAÇÕES DO ASAAS
